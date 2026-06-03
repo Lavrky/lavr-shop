@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lavr Shop — Боты на заказ</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg: #0a0a15;
+            --card: rgba(255,255,255,0.03);
+            --border: rgba(255,255,255,0.06);
+            --green: #00ff88;
+            --blue: #00aaff;
+            --gold: #ffd700;
+            --red: #ff4444;
+            --text: #fff;
+            --gray: #888;
+            --radius: 16px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Arial, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        /* ===== ЧАСТИЦЫ ===== */
+        .particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+        .particle {
+            position: absolute; background: var(--green); border-radius: 50%;
+            animation: float 6s infinite ease-in-out; opacity: 0.2;
+        }
+        .particle:nth-child(even) { background: var(--blue); }
+        @keyframes float {
+            0%, 100% { transform: translateY(0) scale(1); opacity: 0.2; }
+            50% { transform: translateY(-40px) scale(1.8); opacity: 0.5; }
+        }
+
+        /* ===== КОНТЕЙНЕР ===== */
+        .app {
+            max-width: 420px; margin: 0 auto; padding: 16px;
+            position: relative; z-index: 1; min-height: 100vh;
+        }
+
+        /* ===== НАВБАР ===== */
+        .navbar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 16px; position: sticky; top: 0; z-index: 10;
+            background: rgba(10,10,21,0.85); backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border); margin: -16px -16px 16px;
+        }
+        .logo {
+            font-size: 20px; font-weight: 900;
+            background: linear-gradient(135deg, var(--green), var(--blue));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            letter-spacing: 2px;
+        }
+        .nav-btns { display: flex; gap: 6px; }
+        .nav-btn {
+            background: var(--card); border: 1px solid var(--border);
+            color: var(--text); width: 40px; height: 40px; border-radius: 12px;
+            font-size: 18px; cursor: pointer; transition: 0.3s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .nav-btn:hover, .nav-btn.active {
+            border-color: var(--green); background: rgba(0,255,136,0.08);
+            box-shadow: 0 0 15px rgba(0,255,136,0.1);
+        }
+
+        /* ===== СТРАНИЦЫ ===== */
+        .page { display: none; animation: fadeSlide 0.35s ease; }
+        .page.active { display: block; }
+        @keyframes fadeSlide {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== КАРТОЧКИ ===== */
+        .card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 18px; margin-bottom: 10px;
+            transition: 0.3s; cursor: pointer; position: relative; overflow: hidden;
+        }
+        .card::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px;
+            background: linear-gradient(90deg, transparent, var(--green), var(--blue), transparent);
+            opacity: 0; transition: 0.3s;
+        }
+        .card:hover::before { opacity: 1; }
+        .card:hover {
+            border-color: rgba(0,255,136,0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0,255,136,0.05);
+        }
+        .card h3 { font-size: 15px; margin-bottom: 5px; }
+        .card p { font-size: 12px; color: var(--gray); margin-bottom: 12px; line-height: 1.4; }
+        .card-footer { display: flex; justify-content: space-between; align-items: center; }
+        .price { font-size: 17px; font-weight: 700; color: var(--green); }
+        .buy-btn {
+            background: linear-gradient(135deg, var(--green), var(--blue));
+            color: #000; border: none; padding: 10px 20px; border-radius: 10px;
+            font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;
+            position: relative; overflow: hidden;
+        }
+        .buy-btn:active { transform: scale(0.95); }
+
+        /* ===== СТАТИСТИКА ===== */
+        .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 16px 0; }
+        .stat-box {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 14px; padding: 16px 8px; text-align: center;
+        }
+        .stat-num { font-size: 22px; font-weight: 800; color: var(--green); }
+        .stat-num.blue { color: var(--blue); }
+        .stat-num.gold { color: var(--gold); }
+        .stat-label { font-size: 10px; color: var(--gray); margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* ===== АДМИНКА ===== */
+        .order-row {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 14px; margin-bottom: 8px;
+            font-size: 12px; line-height: 1.5;
+        }
+        .order-row b { font-size: 13px; }
+        .status-badge {
+            display: inline-block; padding: 4px 10px; border-radius: 8px;
+            font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .status-pending { background: rgba(255,215,0,0.15); color: var(--gold); }
+        .status-paid { background: rgba(0,255,136,0.15); color: var(--green); }
+        .status-done { background: rgba(0,170,255,0.15); color: var(--blue); }
+        .admin-actions { margin-top: 8px; display: flex; gap: 6px; }
+
+        /* ===== ОТЗЫВЫ ===== */
+        .review {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 14px; margin-bottom: 8px;
+        }
+        .stars { color: var(--gold); font-size: 12px; letter-spacing: 1px; }
+        .review-text { font-size: 12px; color: #bbb; margin: 5px 0; line-height: 1.4; }
+        .review-author { font-size: 10px; color: #555; }
+
+        /* ===== МОДАЛКА ===== */
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 100;
+            align-items: flex-end; justify-content: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: #151525; border: 1px solid var(--border);
+            border-radius: 20px 20px 0 0; padding: 24px 20px 30px;
+            width: 100%; max-width: 420px;
+            animation: slideUp 0.35s ease;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .modal-content h2 { font-size: 18px; margin-bottom: 16px; }
+        .modal-content label { font-size: 11px; color: var(--gray); display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+        .modal-content input, .modal-content textarea {
+            width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+            color: #fff; padding: 12px; border-radius: 10px; margin-bottom: 14px;
+            font-size: 14px; font-family: inherit; resize: none;
+        }
+        .modal-content textarea { height: 80px; }
+        .modal-content input:focus, .modal-content textarea:focus {
+            border-color: var(--green); outline: none;
+        }
+        .btn-row { display: flex; gap: 10px; }
+        .btn-row button { flex: 1; }
+        .btn-cancel {
+            background: var(--card); border: 1px solid var(--border);
+            color: var(--text); padding: 12px; border-radius: 10px;
+            font-size: 14px; font-weight: 600; cursor: pointer;
+        }
+
+        /* ===== ТОСТ ===== */
+        .toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: #1a1a2e; border: 1px solid var(--green);
+            color: var(--green); padding: 12px 24px;
+            border-radius: 14px; font-weight: 600; font-size: 13px; z-index: 200;
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 1.7s;
+            pointer-events: none;
+        }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+        @keyframes toastOut { from { opacity: 1; } to { opacity: 0; } }
+
+        /* ===== СКРОЛЛБАР ===== */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        /* ===== БЕЙДЖ ===== */
+        .badge {
+            display: inline-block; background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border); padding: 6px 14px;
+            border-radius: 20px; font-size: 11px; color: var(--gray);
+            margin: 8px 0 16px;
+        }
+        .emoji-big { font-size: 40px; display: block; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+    <!-- ЧАСТИЦЫ -->
+    <div class="particles" id="particles"></div>
+
+    <div class="app">
+        <!-- НАВБАР -->
+        <div class="navbar">
+            <div class="logo">LAVR SHOP</div>
+            <div class="nav-btns">
+                <button class="nav-btn active" onclick="showPage('home')">🏠</button>
+                <button class="nav-btn" onclick="showPage('catalog')">🛒</button>
+                <button class="nav-btn" id="adminTab" onclick="showPage('admin')" style="display:none;">⚙️</button>
+            </div>
+        </div>
+
+        <!-- ГЛАВНАЯ -->
+        <div class="page active" id="page-home">
+            <div style="text-align:center;padding:10px 0;">
+                <span class="emoji-big">👋</span>
+                <h2 style="font-size:22px;margin-bottom:6px;">Добро пожаловать</h2>
+                <p style="color:var(--gray);font-size:13px;">Боты для Telegram и Discord</p>
+                <div class="badge">⚡ Быстро • Качественно • С поддержкой</div>
+            </div>
+
+            <div class="stats-row">
+                <div class="stat-box"><div class="stat-num" id="totalOrders">0</div><div class="stat-label">Заказов</div></div>
+                <div class="stat-box"><div class="stat-num gold">4.9</div><div class="stat-label">Рейтинг</div></div>
+                <div class="stat-box"><div class="stat-num blue">24ч</div><div class="stat-label">Доставка</div></div>
+            </div>
+
+            <button class="buy-btn" onclick="showPage('catalog')" style="width:100%;padding:16px;font-size:16px;margin-bottom:24px;">
+                🛒 Перейти в каталог
+            </button>
+
+            <h3 style="margin-bottom:12px;font-size:15px;">⭐ Отзывы клиентов</h3>
+            <div class="review"><div class="stars">★★★★★</div><div class="review-text">"Сделал бота за 2 дня. Всё работает идеально!"</div><div class="review-author">@client1</div></div>
+            <div class="review"><div class="stars">★★★★★</div><div class="review-text">"Заказывал тикет-систему. Очень доволен."</div><div class="review-author">@client2</div></div>
+            <div class="review"><div class="stars">★★★★★</div><div class="review-text">"Быстро, качественно, с поддержкой. Топ!"</div><div class="review-author">@client3</div></div>
+        </div>
+
+        <!-- КАТАЛОГ -->
+        <div class="page" id="page-catalog">
+            <h2 style="margin-bottom:16px;font-size:18px;">🛒 Каталог товаров</h2>
+            <div class="card" onclick="openOrderModal('telegram_bot')">
+                <h3>🤖 Telegram бот</h3>
+                <p>Автоответчик, промокоды, админ-панель, рассылки</p>
+                <div class="card-footer"><span class="price">300 ⭐️</span><button class="buy-btn">Купить</button></div>
+            </div>
+            <div class="card" onclick="openOrderModal('discord_bot')">
+                <h3>💬 Discord бот</h3>
+                <p>Тикет-система, модерация, логирование</p>
+                <div class="card-footer"><span class="price">300 ⭐️</span><button class="buy-btn">Купить</button></div>
+            </div>
+            <div class="card" onclick="openOrderModal('shop_bot')">
+                <h3>🛍 Магазин ботов</h3>
+                <p>Полноценный магазин с корзиной и оплатой звёздами</p>
+                <div class="card-footer"><span class="price">500 ⭐️</span><button class="buy-btn">Купить</button></div>
+            </div>
+            <div class="card" onclick="openOrderModal('custom')">
+                <h3>🔧 Кастомная разработка</h3>
+                <p>Любой функционал под ваши задачи. Обсудим лично.</p>
+                <div class="card-footer"><span class="price">от 500 ⭐️</span><button class="buy-btn">Заказать</button></div>
+            </div>
+        </div>
+
+        <!-- АДМИНКА -->
+        <div class="page" id="page-admin">
+            <h2 style="margin-bottom:16px;font-size:18px;">⚙️ Админ-панель</h2>
+            <div class="stats-row" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="stat-box"><div class="stat-num" id="adminTotal">0</div><div class="stat-label">Всего заказов</div></div>
+                <div class="stat-box"><div class="stat-num blue" id="adminEarned">0</div><div class="stat-label">Заработано ⭐️</div></div>
+            </div>
+            <h3 style="margin:16px 0;font-size:14px;">📋 Последние заказы</h3>
+            <div id="adminOrders"></div>
+        </div>
+    </div>
+
+    <!-- МОДАЛКА ЗАКАЗА -->
+    <div class="modal" id="orderModal">
+        <div class="modal-content">
+            <h2>📝 Оформление заказа</h2>
+            <p style="color:var(--gray);margin-bottom:16px;font-size:13px;" id="orderProductName"></p>
+            <label>Ваше имя или @username</label>
+            <input type="text" id="orderName" placeholder="Например: @user">
+            <label>Опишите задачу</label>
+            <textarea id="orderDetails" placeholder="Что должен делать бот? Чем подробнее — тем лучше."></textarea>
+            <div class="btn-row">
+                <button class="buy-btn" onclick="submitOrder()">📤 Отправить</button>
+                <button class="btn-cancel" onclick="closeModal()">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== НАСТРОЙКИ =====
+        const BOT_TOKEN = "8927054690:AAHwJcnIBfvuMJulUw-iF9uLxtJdThFybTo";
+        const ADMIN_ID = 6330682613;
+        const YOUR_USERNAME = "@bebra3jj";
+
+        // ===== TELEGRAM =====
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.setHeaderColor('#0a0a15');
+        tg.setBackgroundColor('#0a0a15');
+        tg.setBottomBarColor('#0a0a15');
+
+        const currentUser = tg.initDataUnsafe?.user;
+        const currentUserId = currentUser?.id || 0;
+        const currentUserName = currentUser?.username || currentUser?.first_name || 'Гость';
+        const isAdmin = currentUserId === ADMIN_ID;
+
+        if (isAdmin) document.getElementById('adminTab').style.display = 'flex';
+
+        // ===== ДАННЫЕ =====
+        let orders = JSON.parse(localStorage.getItem('lavr_orders') || '[]');
+        let currentProduct = '';
+
+        // ===== ЧАСТИЦЫ =====
+        (function createParticles() {
+            const c = document.getElementById('particles');
+            for (let i = 0; i < 25; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.top = Math.random() * 100 + '%';
+                p.style.width = p.style.height = Math.random() * 6 + 2 + 'px';
+                p.style.animationDelay = Math.random() * 6 + 's';
+                p.style.animationDuration = Math.random() * 6 + 4 + 's';
+                c.appendChild(p);
+            }
+        })();
+
+        // ===== НАВИГАЦИЯ =====
+        function showPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + page).classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            const idx = { home: 0, catalog: 1, admin: 2 }[page];
+            document.querySelectorAll('.nav-btn')[idx]?.classList.add('active');
+            if (page === 'admin') renderAdmin();
+            if (page === 'home') updateStats();
+        }
+
+        // ===== МОДАЛКА =====
+        function openOrderModal(product) {
+            currentProduct = product;
+            const names = {
+                'telegram_bot': '🤖 Telegram бот — 300 ⭐️',
+                'discord_bot': '💬 Discord бот — 300 ⭐️',
+                'shop_bot': '🛍 Магазин ботов — 500 ⭐️',
+                'custom': '🔧 Кастомный бот — от 500 ⭐️'
+            };
+            document.getElementById('orderProductName').textContent = names[product] || product;
+            document.getElementById('orderModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('orderModal').classList.remove('active');
+        }
+
+        // ===== ОТПРАВКА ЗАКАЗА =====
+        async function submitOrder() {
+            const name = document.getElementById('orderName').value.trim();
+            const details = document.getElementById('orderDetails').value.trim();
+            if (!name || !details) return showToast('Заполните все поля!');
+
+            const orderId = Date.now().toString().slice(-8);
+            const productNames = {
+                'telegram_bot': '🤖 Telegram бот',
+                'discord_bot': '💬 Discord бот',
+                'shop_bot': '🛍 Магазин ботов',
+                'custom': '🔧 Кастомный бот'
+            };
+
+            const order = {
+                id: orderId, product: currentProduct,
+                productName: productNames[currentProduct] || currentProduct,
+                name, details, status: 'pending',
+                date: new Date().toLocaleString('ru-RU'),
+                userId: currentUserId, userName: currentUserName
+            };
+
+            orders.push(order);
+            localStorage.setItem('lavr_orders', JSON.stringify(orders));
+
+            const msg = `🆕 <b>Новый заказ #${orderId}</b>\n\n` +
+                `🛒 ${order.productName}\n👤 @${currentUserName} (ID: ${currentUserId})\n` +
+                `📝 Имя: ${name}\n📋 Описание: ${details}\n📅 ${order.date}`;
+
+            await sendToTelegram(ADMIN_ID, msg);
+
+            if (currentUserId && currentUserId !== ADMIN_ID) {
+                const clientMsg = `✅ <b>Заявка #${orderId} отправлена!</b>\n\n` +
+                    `🛒 ${order.productName}\n📝 ${details}\n\n` +
+                    `Ожидайте ответа. Связь: ${YOUR_USERNAME}`;
+                await sendToTelegram(currentUserId, clientMsg);
+            }
+
+            closeModal();
+            document.getElementById('orderName').value = '';
+            document.getElementById('orderDetails').value = '';
+            showToast('✅ Заявка отправлена!');
+            updateStats();
+        }
+
+        // ===== API =====
+        async function sendToTelegram(chatId, text) {
+            try {
+                const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' })
+                });
+                const d = await r.json();
+                return d.ok;
+            } catch (e) {
+                console.error(e);
+                return false;
+            }
+        }
+
+        // ===== АДМИНКА =====
+        function renderAdmin() {
+            if (!isAdmin) {
+                document.getElementById('page-admin').innerHTML = '<p style="text-align:center;color:var(--gray);padding:40px;">⛔ Доступ только для администратора</p>';
+                return;
+            }
+            const total = orders.length;
+            const earned = orders.filter(o => o.status === 'paid').length * 300;
+            document.getElementById('adminTotal').textContent = total;
+            document.getElementById('adminEarned').textContent = earned;
+
+            const container = document.getElementById('adminOrders');
+            if (!orders.length) {
+                container.innerHTML = '<p style="color:var(--gray);text-align:center;padding:20px;">Нет заказов</p>';
+                return;
+            }
+
+            container.innerHTML = orders.slice().reverse().map((o, i) => {
+                const realIndex = orders.length - 1 - i;
+                const statusClass = o.status === 'paid' ? 'status-paid' : o.status === 'done' ? 'status-done' : 'status-pending';
+                const statusText = o.status === 'paid' ? 'Оплачен' : o.status === 'done' ? 'Готово' : 'Ожидает';
+                let actions = '';
+                if (o.status === 'pending') actions = `<button class="buy-btn" style="padding:6px 14px;font-size:11px;" onclick="markPaid(${realIndex})">💰 Оплачен</button>`;
+                if (o.status === 'paid') actions = `<button class="buy-btn" style="padding:6px 14px;font-size:11px;" onclick="markDone(${realIndex})">✅ Готово</button>`;
+                
+                return `<div class="order-row">
+                    <b>#${o.id}</b> — ${o.productName || o.product}<br>
+                    👤 ${o.name} ${o.userName ? '(' + o.userName + ')' : ''} | 📅 ${o.date}<br>
+                    📝 ${o.details}<br>
+                    <span class="status-badge ${statusClass}">${statusText}</span>
+                    <div class="admin-actions">${actions}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function markPaid(index) {
+            orders[index].status = 'paid';
+            localStorage.setItem('lavr_orders', JSON.stringify(orders));
+            renderAdmin(); updateStats();
+            showToast('💰 Отмечено как оплаченное');
+            const o = orders[index];
+            if (o.userId && o.userId !== ADMIN_ID) {
+                sendToTelegram(o.userId, `💰 <b>Заказ #${o.id} оплачен!</b>\n\nОжидайте выполнения.`);
+            }
+        }
+
+        function markDone(index) {
+            orders[index].status = 'done';
+            localStorage.setItem('lavr_orders', JSON.stringify(orders));
+            renderAdmin(); updateStats();
+            showToast('✅ Заказ завершён');
+            const o = orders[index];
+            if (o.userId && o.userId !== ADMIN_ID) {
+                sendToTelegram(o.userId, `✅ <b>Заказ #${o.id} готов!</b>\n\nСпасибо за покупку! 🎉\nСвязь: ${YOUR_USERNAME}`);
+            }
+        }
+
+        function updateStats() {
+            const el = document.getElementById('totalOrders');
+            if (el) el.textContent = orders.length;
+        }
+
+        function showToast(text) {
+            const t = document.createElement('div');
+            t.className = 'toast'; t.textContent = text;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 2000);
+        }
+
+        updateStats();
+    </script>
+</body>
+</html>
