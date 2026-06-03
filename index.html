@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lavr Shop — Боты на заказ</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: #0a0a15;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            padding: 0;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 30px 0 20px;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            background: linear-gradient(135deg, #00ff88, #00aaff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .header p {
+            color: #888;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        
+        .badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 12px;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-num {
+            font-size: 22px;
+            font-weight: bold;
+            color: #00ff88;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: #666;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            margin: 25px 0 15px;
+            color: #ddd;
+        }
+        
+        .product-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .product-card:hover {
+            border-color: rgba(0,255,136,0.3);
+            background: rgba(0,255,136,0.03);
+        }
+        
+        .product-card h3 {
+            font-size: 16px;
+            margin-bottom: 6px;
+        }
+        
+        .product-card p {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 10px;
+        }
+        
+        .product-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .price {
+            font-size: 18px;
+            font-weight: bold;
+            color: #00ff88;
+        }
+        
+        .buy-btn {
+            background: linear-gradient(135deg, #00ff88, #00aaff);
+            color: #000;
+            border: none;
+            padding: 10px 22px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        
+        .buy-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .reviews {
+            margin: 30px 0;
+        }
+        
+        .review-card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .review-stars {
+            color: #ffd700;
+            font-size: 14px;
+        }
+        
+        .review-text {
+            font-size: 13px;
+            color: #aaa;
+            margin-top: 6px;
+        }
+        
+        .review-author {
+            font-size: 12px;
+            color: #666;
+            margin-top: 6px;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 30px 0;
+            color: #555;
+            font-size: 12px;
+        }
+        
+        .footer a {
+            color: #00aaff;
+            text-decoration: none;
+        }
+
+        .emoji-icon {
+            font-size: 24px;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <!-- Шапка -->
+        <div class="header">
+            <h1>Lavr Shop</h1>
+            <p>Telegram и Discord боты на заказ</p>
+            <div class="badge">⚡ Быстро • Качественно • С поддержкой</div>
+        </div>
+        
+        <!-- Статистика -->
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-num">50+</div>
+                <div class="stat-label">Заказов</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num">4.9</div>
+                <div class="stat-label">Рейтинг</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num">24ч</div>
+                <div class="stat-label">Доставка</div>
+            </div>
+        </div>
+        
+        <!-- Товары -->
+        <div class="section-title">🛒 Готовые решения</div>
+        
+        <div class="product-card" onclick="buy('template_bot')">
+            <h3>🤖 Шаблон Telegram бота</h3>
+            <p>Автоответчик, промокоды, админ-панель, рассылки</p>
+            <div class="product-footer">
+                <span class="price">300 ⭐️</span>
+                <button class="buy-btn">Купить</button>
+            </div>
+        </div>
+        
+        <div class="product-card" onclick="buy('discord_bot')">
+            <h3>💬 Discord тикет-система</h3>
+            <p>Приём заказов, скрытые каналы, кнопки управления</p>
+            <div class="product-footer">
+                <span class="price">300 ⭐️</span>
+                <button class="buy-btn">Купить</button>
+            </div>
+        </div>
+        
+        <div class="product-card" onclick="buy('shop_bot')">
+            <h3>🛍 Магазин ботов</h3>
+            <p>Полноценный магазин с корзиной и оплатой звёздами</p>
+            <div class="product-footer">
+                <span class="price">500 ⭐️</span>
+                <button class="buy-btn">Купить</button>
+            </div>
+        </div>
+        
+        <div class="section-title">⚙️ Кастомная разработка</div>
+        
+        <div class="product-card" onclick="custom()">
+            <h3>🔧 Разработка с нуля</h3>
+            <p>Любой функционал под ваши задачи. Обсудим лично.</p>
+            <div class="product-footer">
+                <span class="price">от 500 ⭐️</span>
+                <button class="buy-btn">Заказать</button>
+            </div>
+        </div>
+        
+        <!-- Отзывы -->
+        <div class="reviews">
+            <div class="section-title">⭐ Отзывы</div>
+            
+            <div class="review-card">
+                <div class="review-stars">⭐⭐⭐⭐⭐</div>
+                <div class="review-text">"Сделал бота за 2 дня. Всё работает идеально, спасибо!"</div>
+                <div class="review-author">@client1</div>
+            </div>
+            
+            <div class="review-card">
+                <div class="review-stars">⭐⭐⭐⭐⭐</div>
+                <div class="review-text">"Заказывал тикет-систему для Discord. Качеством доволен."</div>
+                <div class="review-author">@client2</div>
+            </div>
+            
+            <div class="review-card">
+                <div class="review-stars">⭐⭐⭐⭐⭐</div>
+                <div class="review-text">"Очень быстро и качественно. Рекомендую!"</div>
+                <div class="review-author">@client3</div>
+            </div>
+        </div>
+        
+        <!-- Футер -->
+        <div class="footer">
+            <p>© 2026 Lavr Shop</p>
+            <p>Связь: <a href="https://t.me/bebra3jj">@bebra3jj</a></p>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        
+        // Устанавливаем цвет верхней панели
+        tg.setHeaderColor('#0a0a15');
+        tg.setBackgroundColor('#0a0a15');
+        
+        function buy(product) {
+            tg.sendData(JSON.stringify({
+                action: "buy",
+                product: product
+            }));
+        }
+        
+        function custom() {
+            tg.sendData(JSON.stringify({
+                action: "custom"
+            }));
+        }
+    </script>
+</body>
+</html>
